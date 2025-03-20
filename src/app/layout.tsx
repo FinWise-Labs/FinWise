@@ -22,7 +22,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem> 
+        {/* error is occured in here */}
           <div className="flex flex-col min-h-screen">
             <Header />
             <main className="flex-grow">{children}</main>
@@ -33,7 +34,5 @@ export default function RootLayout({
     </html>
   )
 }
-
-
 
 import './globals.css'
