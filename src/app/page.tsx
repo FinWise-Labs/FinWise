@@ -21,7 +21,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import photo from "../../public/openart-image_dIIlBSI-_1742460828772_raw.jpg";
 
-export default function Home() {
+import { getSession } from "@auth0/nextjs-auth0";
+
+export default async function Home() {
+
+  const session = await getSession();
+  const user = session?.user;
+  console.log("User session:", user);
+
   return (
     <div className="flex flex-col min-h-screen">
       {/* Hero Section */}

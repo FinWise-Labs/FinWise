@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Menu,
@@ -27,20 +27,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
+import { useUser } from "@auth0/nextjs-auth0/client"
 
 export default function Header() {
+  const { user } = useUser()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
-  const [unreadAlerts, setUnreadAlerts] = useState(3)
+  const [unreadAlerts, setUnreadAlerts] = useState(3) // This could be dynamic in a real app
   const pathname = usePathname()
-
-  // Simulate checking login status
-  useEffect(() => {
-    // Check if we're on a page that requires authentication
-    if (pathname !== "/" && !pathname.startsWith("/auth") && pathname !== "/about") {
-      setIsLoggedIn(true)
-    }
-  }, [pathname])
 
   const isActive = (path: string) => {
     return pathname === path
@@ -64,7 +57,7 @@ export default function Header() {
           </Link>
 
           {/* Desktop Navigation */}
-          {isLoggedIn ? (
+          {user ? (
             <>
               <nav className="hidden md:flex space-x-6">
                 {navLinks.map((link) => (
@@ -98,13 +91,13 @@ export default function Header() {
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="rounded-full">
                       <Avatar className="h-8 w-8">
-                        <AvatarImage src="/placeholder.svg?height=32&width=32" alt="User" />
-                        <AvatarFallback>JD</AvatarFallback>
+                      <AvatarImage src={user.picture ?? undefined} alt={user.name || ''} />
+                        <AvatarFallback>{user.name?.[0] || "U"}</AvatarFallback>
                       </Avatar>
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                    <DropdownMenuLabel>{user.name || "User"}</DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem>
                       <Link href="/profile" className="flex items-center w-full">
@@ -120,7 +113,10 @@ export default function Header() {
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem>
-                      <button className="flex items-center w-full" onClick={() => (window.location.href = "/")}>
+                      <button
+                        className="flex items-center w-full"
+                        onClick={() => (window.location.href = "/api/auth/logout")}
+                      >
                         Log out
                       </button>
                     </DropdownMenuItem>
@@ -175,10 +171,10 @@ export default function Header() {
 
               {/* Auth Buttons - Desktop */}
               <div className="hidden md:flex items-center space-x-4">
-                <Link href="/auth/login">
+                <Link href="/api/auth/login?returnTo=/dashboard">
                   <Button variant="outline">Log In</Button>
                 </Link>
-                <Link href="/auth/signup">
+                <Link href="/api/auth/login?returnTo=/dashboard">
                   <Button>Sign Up</Button>
                 </Link>
               </div>
@@ -186,7 +182,11 @@ export default function Header() {
           )}
 
           {/* Mobile Menu Button */}
-          <button className="md:hidden" onClick={() => setIsMenuOpen(!isMenuOpen)} aria-label="Toggle menu">
+          <button
+            className="md:hidden"
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            aria-label="Toggle menu"
+          >
             {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
         </div>
@@ -195,16 +195,16 @@ export default function Header() {
         {isMenuOpen && (
           <div className="md:hidden py-4">
             <nav className="flex flex-col space-y-4">
-              {isLoggedIn ? (
+              {user ? (
                 <>
                   <div className="flex items-center space-x-3 p-2 bg-gray-50 rounded-lg mb-2">
                     <Avatar className="h-10 w-10">
-                      <AvatarImage src="/placeholder.svg?height=40&width=40" alt="User" />
-                      <AvatarFallback>JD</AvatarFallback>
+                    <AvatarImage src={user.picture ?? undefined} alt={user.name || ''} />
+                      <AvatarFallback>{user.name?.[0] || "U"}</AvatarFallback>
                     </Avatar>
                     <div>
-                      <p className="font-medium">John Doe</p>
-                      <p className="text-xs text-muted-foreground">john.doe@example.com</p>
+                      <p className="font-medium">{user.name || "User"}</p>
+                      <p className="text-xs text-muted-foreground">{user.email}</p>
                     </div>
                   </div>
 
@@ -220,7 +220,9 @@ export default function Header() {
                       {link.icon}
                       {link.name}
                       {link.name === "Alerts" && unreadAlerts > 0 && (
-                        <Badge className="ml-2 px-1.5 py-0.5 text-xs bg-red-500 text-white">{unreadAlerts}</Badge>
+                        <Badge className="ml-2 px-1.5 py-0.5 text-xs bg-red-500 text-white">
+                          {unreadAlerts}
+                        </Badge>
                       )}
                     </Link>
                   ))}
@@ -240,7 +242,7 @@ export default function Header() {
                       className="w-full"
                       onClick={() => {
                         setIsMenuOpen(false)
-                        window.location.href = "/"
+                        window.location.href = "/api/auth/logout"
                       }}
                     >
                       Log Out
@@ -295,12 +297,12 @@ export default function Header() {
                     FAQ
                   </Link>
                   <div className="flex flex-col space-y-2 pt-2 border-t border-gray-200">
-                    <Link href="/auth/login" onClick={() => setIsMenuOpen(false)}>
+                    <Link href="/api/auth/login?returnTo=/dashboard" onClick={() => setIsMenuOpen(false)}>
                       <Button variant="outline" className="w-full">
                         Log In
                       </Button>
                     </Link>
-                    <Link href="/auth/signup" onClick={() => setIsMenuOpen(false)}>
+                    <Link href="/api/auth/login?returnTo=/dashboard" onClick={() => setIsMenuOpen(false)}>
                       <Button className="w-full">Sign Up</Button>
                     </Link>
                   </div>
@@ -313,4 +315,3 @@ export default function Header() {
     </header>
   )
 }
-
