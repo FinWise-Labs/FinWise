@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import {
   ArrowRight,
   BarChart3,
@@ -18,8 +19,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import photo from "../../public/openart-image_dIIlBSI-_1742460828772_raw.jpg";
 
-export default function Home() {
+import { getSession } from "@auth0/nextjs-auth0";
+
+export default async function Home() {
+
+  const session = await getSession();
+  const user = session?.user;
+  console.log("User session:", user);
+
   return (
     <div className="flex flex-col min-h-screen">
       {/* Hero Section */}
@@ -59,11 +68,13 @@ export default function Home() {
                 </Link>
               </div>
             </div>
-            <div className="md:w-1/2">
+            <div className="md:w-1/2 flex justify-center">
               <div className="relative">
                 <div className="absolute -inset-0.5 bg-gradient-to-r from-primary to-blue-600 rounded-2xl blur opacity-30"></div>
-                <img
-                  src="/placeholder.svg?height=400&width=500"
+                <Image
+                  src={photo}
+                  width={500}
+                  height={500}
                   alt="Financial Dashboard Preview"
                   className="relative rounded-xl shadow-2xl border border-white/20"
                 />
