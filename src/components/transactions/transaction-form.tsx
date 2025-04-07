@@ -1,45 +1,68 @@
-import type React from "react"
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
-import { Calendar } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { format } from "date-fns"
-import { CalendarIcon } from "lucide-react"
-import { cn } from "@/lib/utils"
+"use client";
 
-// Define the type for the `transaction` prop
-interface Transaction {
-  id: string
-  date: string
-  description: string
-  category: string
-  type: "income" | "expense"
-  amount: number
-  notes?: string
-}
+import React, { useState } from "react";
+import { useUser } from "@auth0/nextjs-auth0/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { format } from "date-fns";
+import { CalendarIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-// Define the props type for the component
 interface TransactionFormProps {
-  transaction?: Transaction // It's optional in case of creating a new transaction
-  onClose: () => void
+  transaction?: {
+    id: string;
+    date: string;
+    description: string;
+    category: string;
+    type: "income" | "expense";
+    amount: number;
+    notes?: string;
+  };
+  onClose: () => void;
 }
 
-export default function TransactionForm({ transaction, onClose }: TransactionFormProps) {
-  const [date, setDate] = useState<Date | undefined>(transaction ? new Date(transaction.date) : new Date())
-  const [type, setType] = useState(transaction?.type || "expense")
-  const [amount, setAmount] = useState(transaction ? Math.abs(transaction.amount).toString() : "")
-  const [description, setDescription] = useState(transaction?.description || "")
-  const [category, setCategory] = useState(transaction?.category || "")
-  const [notes, setNotes] = useState(transaction?.notes || "")
-  const [isLoading, setIsLoading] = useState(false)
+export default function TransactionForm({
+  transaction,
+  onClose,
+}: TransactionFormProps) {
+  const { user, isLoading } = useUser(); // Get logged-in user
+  const [date, setDate] = useState<Date | undefined>(
+    transaction ? new Date(transaction.date) : new Date()
+  );
+  const [type, setType] = useState(transaction?.type || "expense");
+  const [amount, setAmount] = useState(
+    transaction ? Math.abs(transaction.amount).toString() : ""
+  );
+  const [description, setDescription] = useState(
+    transaction?.description || ""
+  );
+  const [category, setCategory] = useState(transaction?.category || "");
+  const [notes, setNotes] = useState(transaction?.notes || "");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Sample categories
-  const incomeCategories = ["Salary", "Freelance", "Investments", "Gifts", "Other Income"]
-
+  const incomeCategories = [
+    "Salary",
+    "Freelance",
+    "Investments",
+    "Gifts",
+    "Other Income",
+  ];
   const expenseCategories = [
     "Housing",
     "Food",
@@ -51,25 +74,59 @@ export default function TransactionForm({ transaction, onClose }: TransactionFor
     "Education",
     "Personal Care",
     "Other",
-  ]
+  ];
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user?.sub) {
+      alert("You must be logged in to add a transaction.");
+      return;
+    }
 
-    // In a real app, this would save the transaction to the database
-    setTimeout(() => {
-      setIsLoading(false)
-      onClose()
-      alert(transaction ? "Transaction updated successfully!" : "Transaction added successfully!")
-    }, 1000)
-  }
+    setIsSubmitting(true);
+
+    try {
+      const transactionData = {
+        userId: user.sub,
+        type,
+        amount: parseFloat(amount),
+        category,
+        date: date ? date.toISOString() : new Date().toISOString(),
+        description,
+        notes,
+      };
+
+      const response = await fetch("/api/transactions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(transactionData),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to save transaction");
+      }
+
+      onClose();
+      alert(
+        transaction
+          ? "Transaction updated successfully!"
+          : "Transaction added successfully!"
+      );
+    } catch (error: any) {
+      alert(error.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="space-y-2">
         <Label htmlFor="type">Transaction Type</Label>
-        <Select value={type} onValueChange={(value: "income" | "expense") => setType(value)}>
+        <Select
+          value={type}
+          onValueChange={(value: "income" | "expense") => setType(value)}
+        >
           <SelectTrigger id="type">
             <SelectValue placeholder="Select type" />
           </SelectTrigger>
@@ -100,14 +157,22 @@ export default function TransactionForm({ transaction, onClose }: TransactionFor
           <PopoverTrigger asChild>
             <Button
               variant="outline"
-              className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}
+              className={cn(
+                "w-full justify-start text-left font-normal",
+                !date && "text-muted-foreground"
+              )}
             >
               <CalendarIcon className="mr-2 h-4 w-4" />
               {date ? format(date, "PPP") : <span>Pick a date</span>}
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0">
-            <Calendar mode="single" selected={date} onSelect={setDate} initialFocus />
+            <Calendar
+              mode="single"
+              selected={date}
+              onSelect={setDate}
+              initialFocus
+            />
           </PopoverContent>
         </Popover>
       </div>
@@ -130,17 +195,13 @@ export default function TransactionForm({ transaction, onClose }: TransactionFor
             <SelectValue placeholder="Select a category" />
           </SelectTrigger>
           <SelectContent>
-            {type === "income"
-              ? incomeCategories.map((cat) => (
-                  <SelectItem key={cat} value={cat}>
-                    {cat}
-                  </SelectItem>
-                ))
-              : expenseCategories.map((cat) => (
-                  <SelectItem key={cat} value={cat}>
-                    {cat}
-                  </SelectItem>
-                ))}
+            {(type === "income" ? incomeCategories : expenseCategories).map(
+              (cat) => (
+                <SelectItem key={cat} value={cat}>
+                  {cat}
+                </SelectItem>
+              )
+            )}
           </SelectContent>
         </Select>
       </div>
@@ -159,10 +220,10 @@ export default function TransactionForm({ transaction, onClose }: TransactionFor
         <Button type="button" variant="outline" onClick={onClose}>
           Cancel
         </Button>
-        <Button type="submit" disabled={isLoading}>
-          {isLoading ? "Saving..." : transaction ? "Update" : "Save"}
+        <Button type="submit" disabled={isSubmitting || isLoading}>
+          {isSubmitting ? "Saving..." : transaction ? "Update" : "Save"}
         </Button>
       </div>
     </form>
-  )
+  );
 }

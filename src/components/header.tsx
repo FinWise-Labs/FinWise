@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
+import Link from "next/link";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import {
   Menu,
   X,
@@ -15,9 +15,9 @@ import {
   MessageSquare,
   FileText,
   AlertTriangle,
-} from "lucide-react"
-import { usePathname } from "next/navigation"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+} from "lucide-react";
+import { usePathname } from "next/navigation";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,35 +25,66 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Badge } from "@/components/ui/badge"
-import { useUser } from "@auth0/nextjs-auth0/client"
+} from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
+import { useUser } from "@auth0/nextjs-auth0/client";
+import finwiselogo from "../../public/Group 39518.png";
+import Image from "next/image";
 
 export default function Header() {
-  const { user } = useUser()
-  const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const [unreadAlerts, setUnreadAlerts] = useState(3) // This could be dynamic in a real app
-  const pathname = usePathname()
+  const { user } = useUser();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [unreadAlerts, setUnreadAlerts] = useState(3); // This could be dynamic in a real app
+  const pathname = usePathname();
 
   const isActive = (path: string) => {
-    return pathname === path
-  }
+    return pathname === path;
+  };
 
   const navLinks = [
-    { name: "Dashboard", path: "/dashboard", icon: <Home className="h-4 w-4 mr-2" /> },
-    { name: "Transactions", path: "/transactions", icon: <CreditCard className="h-4 w-4 mr-2" /> },
-    { name: "Goals", path: "/goals", icon: <PiggyBank className="h-4 w-4 mr-2" /> },
-    { name: "Reports", path: "/reports", icon: <BarChart3 className="h-4 w-4 mr-2" /> },
-    { name: "Advisor", path: "/advisor", icon: <MessageSquare className="h-4 w-4 mr-2" /> },
-    { name: "Alerts", path: "/alerts", icon: <AlertTriangle className="h-4 w-4 mr-2" /> },
-  ]
+    {
+      name: "Dashboard",
+      path: "/dashboard",
+      icon: <Home className="h-4 w-4 mr-2" />,
+    },
+    {
+      name: "Transactions",
+      path: "/transactions",
+      icon: <CreditCard className="h-4 w-4 mr-2" />,
+    },
+    {
+      name: "Goals",
+      path: "/goals",
+      icon: <PiggyBank className="h-4 w-4 mr-2" />,
+    },
+    {
+      name: "Reports",
+      path: "/reports",
+      icon: <BarChart3 className="h-4 w-4 mr-2" />,
+    },
+    {
+      name: "Advisor",
+      path: "/advisor",
+      icon: <MessageSquare className="h-4 w-4 mr-2" />,
+    },
+    {
+      name: "Alerts",
+      path: "/alerts",
+      icon: <AlertTriangle className="h-4 w-4 mr-2" />,
+    },
+  ];
 
   return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center h-16">
           <Link href="/" className="flex items-center">
-            <span className="text-2xl font-bold text-primary">FinWise</span>
+            <Image
+              src={finwiselogo}
+              alt="finwise logo"
+              width={100}
+              height={50}
+            />
           </Link>
 
           {/* Desktop Navigation */}
@@ -89,9 +120,16 @@ export default function Header() {
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="rounded-full">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="rounded-full"
+                    >
                       <Avatar className="h-8 w-8">
-                      <AvatarImage src={user.picture ?? undefined} alt={user.name || ''} />
+                        <AvatarImage
+                          src={user.picture ?? undefined}
+                          alt={user.name || ""}
+                        />
                         <AvatarFallback>{user.name?.[0] || "U"}</AvatarFallback>
                       </Avatar>
                     </Button>
@@ -100,13 +138,19 @@ export default function Header() {
                     <DropdownMenuLabel>{user.name || "User"}</DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem>
-                      <Link href="/profile" className="flex items-center w-full">
+                      <Link
+                        href="/profile"
+                        className="flex items-center w-full"
+                      >
                         <User className="mr-2 h-4 w-4" />
                         <span>Profile</span>
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem>
-                      <Link href="/reports" className="flex items-center w-full">
+                      <Link
+                        href="/reports"
+                        className="flex items-center w-full"
+                      >
                         <FileText className="mr-2 h-4 w-4" />
                         <span>Reports</span>
                       </Link>
@@ -115,7 +159,9 @@ export default function Header() {
                     <DropdownMenuItem>
                       <button
                         className="flex items-center w-full"
-                        onClick={() => (window.location.href = "/api/auth/logout")}
+                        onClick={() =>
+                          (window.location.href = "/api/auth/logout")
+                        }
                       >
                         Log out
                       </button>
@@ -187,7 +233,11 @@ export default function Header() {
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             aria-label="Toggle menu"
           >
-            {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            {isMenuOpen ? (
+              <X className="h-6 w-6" />
+            ) : (
+              <Menu className="h-6 w-6" />
+            )}
           </button>
         </div>
 
@@ -199,12 +249,17 @@ export default function Header() {
                 <>
                   <div className="flex items-center space-x-3 p-2 bg-gray-50 rounded-lg mb-2">
                     <Avatar className="h-10 w-10">
-                    <AvatarImage src={user.picture ?? undefined} alt={user.name || ''} />
+                      <AvatarImage
+                        src={user.picture ?? undefined}
+                        alt={user.name || ""}
+                      />
                       <AvatarFallback>{user.name?.[0] || "U"}</AvatarFallback>
                     </Avatar>
                     <div>
                       <p className="font-medium">{user.name || "User"}</p>
-                      <p className="text-xs text-muted-foreground">{user.email}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {user.email}
+                      </p>
                     </div>
                   </div>
 
@@ -241,8 +296,8 @@ export default function Header() {
                       variant="outline"
                       className="w-full"
                       onClick={() => {
-                        setIsMenuOpen(false)
-                        window.location.href = "/api/auth/logout"
+                        setIsMenuOpen(false);
+                        window.location.href = "/api/auth/logout";
                       }}
                     >
                       Log Out
@@ -297,12 +352,18 @@ export default function Header() {
                     FAQ
                   </Link>
                   <div className="flex flex-col space-y-2 pt-2 border-t border-gray-200">
-                    <Link href="/api/auth/login?returnTo=/dashboard" onClick={() => setIsMenuOpen(false)}>
+                    <Link
+                      href="/api/auth/login?returnTo=/dashboard"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
                       <Button variant="outline" className="w-full">
                         Log In
                       </Button>
                     </Link>
-                    <Link href="/api/auth/login?returnTo=/dashboard" onClick={() => setIsMenuOpen(false)}>
+                    <Link
+                      href="/api/auth/login?returnTo=/dashboard"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
                       <Button className="w-full">Sign Up</Button>
                     </Link>
                   </div>
@@ -313,5 +374,5 @@ export default function Header() {
         )}
       </div>
     </header>
-  )
+  );
 }
