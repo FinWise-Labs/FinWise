@@ -54,7 +54,7 @@ export default function Home() {
                 personalized recommendations.
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
-                <Link href="/dashboard">
+                <Link  href="/api/auth/login?returnTo=/dashboard">
                   <Button
                     size="lg"
                     className="bg-white text-primary font-semibold hover:bg-gray-100 transition group"
