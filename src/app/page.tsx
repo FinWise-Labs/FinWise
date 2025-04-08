@@ -1,3 +1,4 @@
+"use client";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -21,13 +22,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import photo from "../../public/openart-image_dIIlBSI-_1742460828772_raw.jpg";
 
-import { getSession } from "@auth0/nextjs-auth0";
+import { getSession } from '@auth0/nextjs-auth0';   
+import { useUser } from "@auth0/nextjs-auth0/client";
 
-export default async function Home() {
 
-  const session = await getSession();
-  const user = session?.user;
-  console.log("User session:", user);
+export default function Home() {
+
+  const { user } = useUser();
+  console.log("User session:", user || "No user logged in");
+
+  // const session = await getSession();
+  // const user = session?.user;
+  // console.log("User session:", user || "No user logged in");
 
   return (
     <div className="flex flex-col min-h-screen">
