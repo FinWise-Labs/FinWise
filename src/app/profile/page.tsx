@@ -1,8 +1,7 @@
 "use client"
 
-import type React from "react"
-
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useUser } from '@auth0/nextjs-auth0/client'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -12,49 +11,152 @@ import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Shield, Upload } from "lucide-react"
+import { toast } from 'sonner' // Optional: Add toast notifications for better UX
+
+// Define the type for user metadata
+interface UserMetadata {
+  phone?: string;
+  currency?: string;
+  twoFactorEnabled?: boolean;
+  emailNotifications?: boolean;
+  pushNotifications?: boolean;
+  [key: string]: any; // Allow for additional properties
+}
 
 export default function ProfilePage() {
-  const [name, setName] = useState("John Doe")
-  const [email, setEmail] = useState("john.doe@example.com")
-  const [phone, setPhone] = useState("(555) 123-4567")
+  const { user, error, isLoading: authLoading } = useUser()
+  
+  const [name, setName] = useState("")
+  const [email, setEmail] = useState("")
+  const [phone, setPhone] = useState("")
   const [currency, setCurrency] = useState("USD")
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false)
   const [emailNotifications, setEmailNotifications] = useState(true)
   const [pushNotifications, setPushNotifications] = useState(true)
   const [isLoading, setIsLoading] = useState(false)
+  const [userMetadata, setUserMetadata] = useState<UserMetadata>({})
 
-  const handleProfileUpdate = (e: React.FormEvent) => {
+  // Load user data when component mounts
+  useEffect(() => {
+    if (user) {
+      // Set basic user info from Auth0
+      setName(user.name || "")
+      setEmail(user.email || "")
+      
+      // Try to get user metadata which may contain additional profile fields
+      const metadata = (user.user_metadata as UserMetadata) || {}
+      setUserMetadata(metadata)
+      
+      // Set additional fields from metadata if they exist
+      setPhone(metadata.phone || "")
+      setCurrency(metadata.currency || "USD")
+      setTwoFactorEnabled(metadata.twoFactorEnabled || false)
+      setEmailNotifications(metadata.emailNotifications !== undefined ? metadata.emailNotifications : true)
+      setPushNotifications(metadata.pushNotifications !== undefined ? metadata.pushNotifications : true)
+    }
+  }, [user])
+
+  const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
 
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const response = await fetch('/api/auth/me', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phone,
+          currency,
+        }),
+      })
+
+      const data = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to update profile')
+      }
+
+      toast?.success("Profile updated successfully!")
+      // Update local metadata state
+      setUserMetadata(prev => ({ ...prev, phone, currency }))
+    } catch (error: any) {
+      console.error('Error updating profile:', error)
+      toast?.error(error.message || "Failed to update profile")
+    } finally {
       setIsLoading(false)
-      alert("Profile updated successfully!")
-    }, 1000)
+    }
   }
 
-  const handleSecurityUpdate = (e: React.FormEvent) => {
+  const handleSecurityUpdate = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
 
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const response = await fetch('/api/auth/me', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          twoFactorEnabled,
+        }),
+      })
+
+      const data = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to update security settings')
+      }
+
+      toast?.success("Security settings updated successfully!")
+      // Update local metadata state
+      setUserMetadata(prev => ({ ...prev, twoFactorEnabled }))
+    } catch (error: any) {
+      console.error('Error updating security settings:', error)
+      toast?.error(error.message || "Failed to update security settings")
+    } finally {
       setIsLoading(false)
-      alert("Security settings updated successfully!")
-    }, 1000)
+    }
   }
 
-  const handleNotificationUpdate = (e: React.FormEvent) => {
+  const handleNotificationUpdate = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
 
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const response = await fetch('/api/auth/me', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          emailNotifications,
+          pushNotifications,
+        }),
+      })
+
+      const data = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to update notification preferences')
+      }
+
+      toast?.success("Notification preferences updated successfully!")
+      // Update local metadata state
+      setUserMetadata(prev => ({ ...prev, emailNotifications, pushNotifications }))
+    } catch (error: any) {
+      console.error('Error updating notification preferences:', error)
+      toast?.error(error.message || "Failed to update notification preferences")
+    } finally {
       setIsLoading(false)
-      alert("Notification preferences updated successfully!")
-    }, 1000)
+    }
   }
+
+  if (authLoading) return <div className="flex justify-center items-center min-h-screen">Loading...</div>
+  if (error) return <div className="text-red-500">Error: {error.message}</div>
+  if (!user) return <div className="text-center p-8">Please log in to view your profile.</div>
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -80,12 +182,14 @@ export default function ProfilePage() {
                   <div className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="name">Full Name</Label>
-                      <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
+                      <Input id="name" value={name} onChange={(e) => setName(e.target.value)} disabled />
+                      <p className="text-xs text-muted-foreground mt-1">Name can only be changed through Auth0</p>
                     </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="email">Email Address</Label>
-                      <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+                      <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} disabled />
+                      <p className="text-xs text-muted-foreground mt-1">Email can only be changed through Auth0</p>
                     </div>
 
                     <div className="space-y-2">
@@ -125,18 +229,13 @@ export default function ProfilePage() {
               </CardHeader>
               <CardContent className="flex flex-col items-center space-y-4">
                 <Avatar className="h-24 w-24">
-                  <AvatarImage src="/placeholder.svg?height=96&width=96" alt="Profile" />
-                  <AvatarFallback>JD</AvatarFallback>
+                  <AvatarImage src={user.picture || "/placeholder.svg?height=96&width=96"} alt="Profile" />
+                  <AvatarFallback>{name?.substring(0, 2).toUpperCase() || "JD"}</AvatarFallback>
                 </Avatar>
 
-                <Button variant="outline" className="w-full">
-                  <Upload className="mr-2 h-4 w-4" />
-                  Upload New Photo
-                </Button>
-
-                <Button variant="ghost" className="text-destructive hover:text-destructive/90 w-full">
-                  Remove Photo
-                </Button>
+                <p className="text-xs text-muted-foreground text-center">
+                  Profile picture is managed through your Auth0 account
+                </p>
               </CardContent>
             </Card>
           </div>
@@ -152,26 +251,7 @@ export default function ProfilePage() {
             <CardContent>
               <form onSubmit={handleSecurityUpdate} className="space-y-6">
                 <div className="space-y-4">
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-medium">Change Password</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="current-password">Current Password</Label>
-                        <Input id="current-password" type="password" />
-                      </div>
-                      <div></div>
-                      <div className="space-y-2">
-                        <Label htmlFor="new-password">New Password</Label>
-                        <Input id="new-password" type="password" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="confirm-password">Confirm New Password</Label>
-                        <Input id="confirm-password" type="password" />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="pt-4 border-t">
+                  <div className="pt-4">
                     <h3 className="text-lg font-medium mb-4">Two-Factor Authentication</h3>
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
@@ -203,18 +283,9 @@ export default function ProfilePage() {
                       <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
                         <div>
                           <p className="font-medium">Current Session</p>
-                          <p className="text-sm text-muted-foreground">Chrome on Windows • IP: 192.168.1.1</p>
+                          <p className="text-sm text-muted-foreground">Current Browser • Active Now</p>
                         </div>
                         <div className="text-sm text-green-600 font-medium">Active Now</div>
-                      </div>
-                      <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
-                        <div>
-                          <p className="font-medium">Mobile App</p>
-                          <p className="text-sm text-muted-foreground">iPhone 13 • Last active: 2 hours ago</p>
-                        </div>
-                        <Button variant="ghost" size="sm" className="text-destructive">
-                          Revoke
-                        </Button>
                       </div>
                     </div>
                   </div>
@@ -242,36 +313,8 @@ export default function ProfilePage() {
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
-                        <div className="font-medium">Transaction Alerts</div>
-                        <div className="text-sm text-muted-foreground">Receive emails for new transactions</div>
-                      </div>
-                      <Switch checked={emailNotifications} onCheckedChange={setEmailNotifications} />
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <div className="font-medium">Budget Alerts</div>
-                        <div className="text-sm text-muted-foreground">
-                          Receive emails when you're close to exceeding your budget
-                        </div>
-                      </div>
-                      <Switch checked={emailNotifications} onCheckedChange={setEmailNotifications} />
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <div className="font-medium">Goal Milestones</div>
-                        <div className="text-sm text-muted-foreground">
-                          Receive emails when you reach goal milestones
-                        </div>
-                      </div>
-                      <Switch checked={emailNotifications} onCheckedChange={setEmailNotifications} />
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <div className="font-medium">Monthly Reports</div>
-                        <div className="text-sm text-muted-foreground">Receive monthly financial summary reports</div>
+                        <div className="font-medium">Email Notifications</div>
+                        <div className="text-sm text-muted-foreground">Receive email notifications</div>
                       </div>
                       <Switch checked={emailNotifications} onCheckedChange={setEmailNotifications} />
                     </div>
@@ -287,30 +330,6 @@ export default function ProfilePage() {
                         </div>
                         <Switch checked={pushNotifications} onCheckedChange={setPushNotifications} />
                       </div>
-
-                      {pushNotifications && (
-                        <>
-                          <div className="flex items-center justify-between">
-                            <div className="space-y-0.5">
-                              <div className="font-medium">Smart Alerts</div>
-                              <div className="text-sm text-muted-foreground">
-                                Get notified when unusual spending is detected
-                              </div>
-                            </div>
-                            <Switch defaultChecked />
-                          </div>
-
-                          <div className="flex items-center justify-between">
-                            <div className="space-y-0.5">
-                              <div className="font-medium">AI Insights</div>
-                              <div className="text-sm text-muted-foreground">
-                                Receive personalized financial insights
-                              </div>
-                            </div>
-                            <Switch defaultChecked />
-                          </div>
-                        </>
-                      )}
                     </div>
                   </div>
                 </div>
@@ -326,4 +345,3 @@ export default function ProfilePage() {
     </div>
   )
 }
-
