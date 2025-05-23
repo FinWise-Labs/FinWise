@@ -23,6 +23,7 @@ import {
 import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import toast from "react-hot-toast";
 
 interface GoalFormProps {
   goal?: {
@@ -38,33 +39,21 @@ interface GoalFormProps {
   onClose: () => void;
 }
 
-export default function GoalForm({ goal, onClose }: GoalFormProps) {
+export default function GoalForm({ onClose }: GoalFormProps) {
   const { user, isLoading } = useUser(); // Get logged-in user
-  const [name, setName] = useState<string>(goal ? goal.name : "");
-  const [targetAmount, setTargetAmount] = useState(
-    goal ? Math.abs(goal.targetAmount).toString() : ""
-  );
-  const [currentAmount, setCurrentAmount] = useState(
-    goal ? Math.abs(goal.currentAmount).toString() : ""
-  );
-  const [targetDate, setTargetDate] = useState<Date | undefined>(
-    goal ? new Date(goal.targetDate) : undefined
-  );
-  const [description, setDescription] = useState<string>(
-    goal ? goal.description : ""
-  );
-  const [priority, setPriority] = useState<"high" | "medium" | "low">(
-    goal ? goal.priority : "medium"
-  );
-  const [monthlyContribution, setMonthlyContribution] = useState(
-    goal ? Math.abs(goal.monthlyContribution).toString() : ""
-  );
+  const [name, setName] = useState<string>("");
+  const [targetAmount, setTargetAmount] = useState("");
+  const [currentAmount, setCurrentAmount] = useState("");
+  const [targetDate, setTargetDate] = useState<Date | undefined>(undefined);
+  const [description, setDescription] = useState<string>("");
+  const [priority, setPriority] = useState<"high" | "medium" | "low">("medium");
+  const [monthlyContribution, setMonthlyContribution] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user?.sub) {
-      alert("You must be logged in to add a transaction.");
+      toast.error("You must be logged in to add a transaction.");
       return;
     }
     setIsSubmitting(true);
@@ -92,13 +81,10 @@ export default function GoalForm({ goal, onClose }: GoalFormProps) {
       }
 
       onClose();
-      alert(
-        goal
-          ? "Goal updated successfully!"
-          : "Goal added successfully!"
-      );
+      toast.success("Goal added successfully!");
     } catch (error: any) {
       alert(error.message);
+      toast.error("Failed to save goal");
     } finally {
       setIsSubmitting(false);
     }
@@ -228,7 +214,7 @@ export default function GoalForm({ goal, onClose }: GoalFormProps) {
           Cancel
         </Button>
         <Button type="submit" disabled={isSubmitting || isLoading}>
-          {isSubmitting ? "Saving..." : goal ? "Update" : "Save"}
+          {isSubmitting ? "Update" : "Save"}
         </Button>
       </div>
     </form>
