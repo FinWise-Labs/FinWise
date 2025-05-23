@@ -36,7 +36,7 @@ interface TransactionFormProps {
   onClose: () => void;
 }
 
-export default function TransactionForm({
+export default function TransactionAddForm({
   transaction,
   onClose,
 }: TransactionFormProps) {
