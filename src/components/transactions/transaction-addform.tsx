@@ -31,7 +31,7 @@ interface TransactionFormProps {
     category: string;
     type: "income" | "expense";
     amount: number;
-    notes?: string;
+    note?: string;  
   };
   onClose: () => void;
 }
@@ -52,7 +52,7 @@ export default function TransactionAddForm({
     transaction?.description || ""
   );
   const [category, setCategory] = useState(transaction?.category || "");
-  const [notes, setNotes] = useState(transaction?.notes || "");
+  const [note, setNote] = useState(transaction?.note || "");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Sample categories
@@ -93,7 +93,7 @@ export default function TransactionAddForm({
         category,
         date: date ? date.toISOString() : new Date().toISOString(),
         description,
-        notes,
+        note,  
       };
 
       const response = await fetch("/api/transactions", {
@@ -103,9 +103,13 @@ export default function TransactionAddForm({
       });
 
       if (!response.ok) {
-        throw new Error("Failed to save transaction");
+        // Better error handling
+        const errorText = await response.text();
+        console.error('Server error:', errorText);
+        throw new Error(`Failed to save transaction: ${response.status}`);
       }
 
+      const result = await response.json();
       onClose();
       alert(
         transaction
@@ -113,7 +117,8 @@ export default function TransactionAddForm({
           : "Transaction added successfully!"
       );
     } catch (error: any) {
-      alert(error.message);
+      console.error('Error saving transaction:', error);
+      alert(`Error: ${error.message}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -207,12 +212,12 @@ export default function TransactionAddForm({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="notes">Notes (Optional)</Label>
+        <Label htmlFor="note">Notes (Optional)</Label>  
         <Textarea
-          id="notes"
+          id="note"
           placeholder="Add any additional details about this transaction"
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
         />
       </div>
 

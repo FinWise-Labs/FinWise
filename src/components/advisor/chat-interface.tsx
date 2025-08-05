@@ -1,108 +1,115 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState, useRef, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Send } from "lucide-react"
+import { useState, useRef, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Send } from "lucide-react";
 
 type Message = {
-  id: number
-  content: string
-  sender: "user" | "ai"
-  timestamp: Date
+  id: number;
+  content: string;
+  sender: "user" | "ai";
+  timestamp: Date;
+};
+
+interface ChatInterfaceProps {
+  userId: string;
 }
 
-export default function ChatInterface() {
+export default function ChatInterface({ userId }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
-      content: "Hello! I'm your AI financial advisor. How can I help you today?",
+      content:
+        "Hello! I'm your AI financial advisor. I've analyzed your financial data and I'm ready to provide personalized advice. How can I help you today?",
       sender: "ai",
       timestamp: new Date(),
     },
-  ])
-  const [input, setInput] = useState("")
-  const [isTyping, setIsTyping] = useState(false)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
+  ]);
+  const [input, setInput] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Sample responses for demo purposes
-  const sampleResponses = {
-    savings:
-      "Based on your current spending patterns, I recommend setting up an automatic transfer of 15% of your income to a high-yield savings account. This could help you save an additional $450 per month.",
-    debt: "Looking at your financial profile, I suggest focusing on paying off your high-interest debt first. By allocating an extra $200 monthly to your credit card debt, you could be debt-free in approximately 14 months.",
-    budget:
-      "For your vacation budget, I recommend setting aside $150-200 per month for the next 6 months. Based on your current expenses, you could reduce dining out by 30% to free up these funds without impacting your other financial goals.",
-    invest:
-      "Given your risk profile and financial goals, a diversified portfolio with 70% index funds, 20% bonds, and 10% cash reserves might be appropriate. Consider maximizing your retirement contributions before exploring additional investment options.",
-    expenses:
-      "I've analyzed your spending patterns and identified potential savings of $320 monthly. Your subscription services ($85), dining out ($150), and transportation costs ($85) are areas where small adjustments could lead to significant savings.",
-  }
+  const getAIResponse = async (userMessage: string): Promise<string> => {
+    try {
+      const response = await fetch("/api/ai-advisor", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId,
+          message: userMessage,
+        }),
+      });
 
-  // Auto-scroll to bottom when messages change
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [messages])
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!input.trim()) return
+      const data = await response.json();
+      return (
+        data.advice ||
+        "I apologize, but I couldn't generate a response at the moment. Please try again."
+      );
+    } catch (error) {
+      console.error("Error getting AI response:", error);
+      return "I'm sorry, I'm having trouble connecting right now. Please try again in a moment.";
+    }
+  };
 
-    // Add user message
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || isTyping) return;
+
     const userMessage: Message = {
-      id: messages.length + 1,
+      id: Date.now(),
       content: input,
       sender: "user",
       timestamp: new Date(),
-    }
-    setMessages((prev) => [...prev, userMessage])
-    setInput("")
-    setIsTyping(true)
+    };
+    setMessages((prev) => [...prev, userMessage]);
+    const currentInput = input;
+    setInput("");
+    setIsTyping(true);
 
-    // Simulate AI response after a delay
-    setTimeout(() => {
-      let responseContent =
-        "I'm not sure how to help with that specific question. Could you provide more details about your financial situation?"
+    const aiResponse = await getAIResponse(currentInput);
 
-      // Check for keywords in the user's message
-      const lowerInput = input.toLowerCase()
-      if (lowerInput.includes("save") || lowerInput.includes("saving")) {
-        responseContent = sampleResponses.savings
-      } else if (lowerInput.includes("debt") || lowerInput.includes("loan") || lowerInput.includes("credit")) {
-        responseContent = sampleResponses.debt
-      } else if (lowerInput.includes("budget") || lowerInput.includes("vacation")) {
-        responseContent = sampleResponses.budget
-      } else if (lowerInput.includes("invest") || lowerInput.includes("stock")) {
-        responseContent = sampleResponses.invest
-      } else if (lowerInput.includes("expense") || lowerInput.includes("spend") || lowerInput.includes("cost")) {
-        responseContent = sampleResponses.expenses
-      }
-
-      const aiMessage: Message = {
-        id: messages.length + 2,
-        content: responseContent,
-        sender: "ai",
-        timestamp: new Date(),
-      }
-      setMessages((prev) => [...prev, aiMessage])
-      setIsTyping(false)
-    }, 1500)
-  }
+    const aiMessage: Message = {
+      id: Date.now() + 1,
+      content: aiResponse,
+      sender: "ai",
+      timestamp: new Date(),
+    };
+    setMessages((prev) => [...prev, aiMessage]);
+    setIsTyping(false);
+  };
 
   return (
     <div className="flex flex-col h-full">
       <div className="flex-grow overflow-y-auto p-4 space-y-4">
         {messages.map((message) => (
-          <div key={message.id} className={`flex ${message.sender === "user" ? "justify-end" : "justify-start"}`}>
+          <div
+            key={message.id}
+            className={`flex ${
+              message.sender === "user" ? "justify-end" : "justify-start"
+            }`}
+          >
             <div
               className={`max-w-[80%] rounded-lg p-3 ${
-                message.sender === "user" ? "bg-primary text-primary-foreground" : "bg-muted"
+                message.sender === "user"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted"
               }`}
             >
-              <p>{message.content}</p>
+              <p className="whitespace-pre-wrap">{message.content}</p>
               <p className="text-xs opacity-70 mt-1">
-                {message.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                {message.timestamp.toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
               </p>
             </div>
           </div>
@@ -138,12 +145,15 @@ export default function ChatInterface() {
             placeholder="Ask your financial question..."
             disabled={isTyping}
           />
-          <Button type="submit" size="icon" disabled={isTyping || !input.trim()}>
+          <Button
+            type="submit"
+            size="icon"
+            disabled={isTyping || !input.trim()}
+          >
             <Send className="h-4 w-4" />
           </Button>
         </form>
       </div>
     </div>
-  )
+  );
 }
-
