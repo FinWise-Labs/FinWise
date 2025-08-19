@@ -67,11 +67,6 @@ export default function Header() {
       path: "/advisor",
       icon: <MessageSquare className="h-4 w-4 mr-2" />,
     },
-    {
-      name: "Alerts",
-      path: "/alerts",
-      icon: <AlertTriangle className="h-4 w-4 mr-2" />,
-    },
   ];
 
   return (
