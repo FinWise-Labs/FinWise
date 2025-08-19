@@ -23,6 +23,7 @@ import {
 import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import toast from "react-hot-toast";
 
 interface GoalFormProps {
   goal?: {
@@ -30,7 +31,7 @@ interface GoalFormProps {
     name: string;
     targetDate: string;
     description: string;
-    priority: "high" | "medium" | "low";
+    priority: "High" | "Medium" | "Low"; // Changed to match backend
     targetAmount: number;
     currentAmount: number;
     monthlyContribution: number;
@@ -38,33 +39,21 @@ interface GoalFormProps {
   onClose: () => void;
 }
 
-export default function GoalForm({ goal, onClose }: GoalFormProps) {
-  const { user, isLoading } = useUser(); // Get logged-in user
-  const [name, setName] = useState<string>(goal ? goal.name : "");
-  const [targetAmount, setTargetAmount] = useState(
-    goal ? Math.abs(goal.targetAmount).toString() : ""
-  );
-  const [currentAmount, setCurrentAmount] = useState(
-    goal ? Math.abs(goal.currentAmount).toString() : ""
-  );
-  const [targetDate, setTargetDate] = useState<Date | undefined>(
-    goal ? new Date(goal.targetDate) : undefined
-  );
-  const [description, setDescription] = useState<string>(
-    goal ? goal.description : ""
-  );
-  const [priority, setPriority] = useState<"high" | "medium" | "low">(
-    goal ? goal.priority : "medium"
-  );
-  const [monthlyContribution, setMonthlyContribution] = useState(
-    goal ? Math.abs(goal.monthlyContribution).toString() : ""
-  );
+export default function GoalForm({ onClose }: GoalFormProps) {
+  const { user, isLoading } = useUser();
+  const [name, setName] = useState<string>("");
+  const [targetAmount, setTargetAmount] = useState("");
+  const [currentAmount, setCurrentAmount] = useState("");
+  const [targetDate, setTargetDate] = useState<Date | undefined>(undefined);
+  const [description, setDescription] = useState<string>("");
+  const [priority, setPriority] = useState<"High" | "Medium" | "Low">("Medium"); // Changed to match backend
+  const [monthlyContribution, setMonthlyContribution] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user?.sub) {
-      alert("You must be logged in to add a transaction.");
+      toast.error("You must be logged in to add a transaction.");
       return;
     }
     setIsSubmitting(true);
@@ -88,17 +77,15 @@ export default function GoalForm({ goal, onClose }: GoalFormProps) {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to save goal");
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to save goal");
       }
 
       onClose();
-      alert(
-        goal
-          ? "Goal updated successfully!"
-          : "Goal added successfully!"
-      );
+      toast.success("Goal added successfully!");
     } catch (error: any) {
-      alert(error.message);
+      console.error("Error saving goal:", error);
+      toast.error(error.message || "Failed to save goal");
     } finally {
       setIsSubmitting(false);
     }
@@ -184,7 +171,7 @@ export default function GoalForm({ goal, onClose }: GoalFormProps) {
           <Label htmlFor="priority">Priority</Label>
           <Select
             value={priority}
-            onValueChange={(value: "high" | "medium" | "low") =>
+            onValueChange={(value: "High" | "Medium" | "Low") =>
               setPriority(value)
             }
           >
@@ -192,9 +179,9 @@ export default function GoalForm({ goal, onClose }: GoalFormProps) {
               <SelectValue placeholder="Select priority" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="high">High</SelectItem>
-              <SelectItem value="medium">Medium</SelectItem>
-              <SelectItem value="low">Low</SelectItem>
+              <SelectItem value="High">High</SelectItem>
+              <SelectItem value="Medium">Medium</SelectItem>
+              <SelectItem value="Low">Low</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -228,7 +215,7 @@ export default function GoalForm({ goal, onClose }: GoalFormProps) {
           Cancel
         </Button>
         <Button type="submit" disabled={isSubmitting || isLoading}>
-          {isSubmitting ? "Saving..." : goal ? "Update" : "Save"}
+          {isSubmitting ? "Saving..." : "Save Goal"}
         </Button>
       </div>
     </form>
