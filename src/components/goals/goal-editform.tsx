@@ -2,7 +2,7 @@
 
 import type React from "react";
 import { useUser } from "@auth0/nextjs-auth0/client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,75 +26,171 @@ import { cn } from "@/lib/utils";
 import toast from "react-hot-toast";
 
 interface GoalFormProps {
-  goal?: {
-    id: string;
+  goal: {
+    id?: string;
+    _id?: string; // Support both id formats
     name: string;
     targetDate: string;
     description: string;
-    priority: "High" | "Medium" | "Low"; // Changed to match backend
+    priority: "High" | "Medium" | "Low";
     targetAmount: number;
     currentAmount: number;
     monthlyContribution: number;
   };
   onClose: () => void;
+  onSuccess?: () => void;
 }
 
-export default function GoalForm({ onClose }: GoalFormProps) {
+export default function GoalForm({ goal, onClose, onSuccess }: GoalFormProps) {
   const { user, isLoading } = useUser();
   const [name, setName] = useState<string>("");
-  const [targetAmount, setTargetAmount] = useState("");
-  const [currentAmount, setCurrentAmount] = useState("");
+  const [targetAmount, setTargetAmount] = useState<string>("");
+  const [currentAmount, setCurrentAmount] = useState<string>("");
   const [targetDate, setTargetDate] = useState<Date | undefined>(undefined);
   const [description, setDescription] = useState<string>("");
-  const [priority, setPriority] = useState<"High" | "Medium" | "Low">("Medium"); // Changed to match backend
-  const [monthlyContribution, setMonthlyContribution] = useState("");
+  const [priority, setPriority] = useState<"High" | "Medium" | "Low">("Medium");
+  const [monthlyContribution, setMonthlyContribution] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Get the goal ID, supporting both formats
+  const getGoalId = () => {
+    return goal?.id || goal?._id;
+  };
+
+  // Populate form fields when component mounts
+  useEffect(() => {
+    if (goal) {
+      setName(goal.name);
+      setTargetAmount(goal.targetAmount.toString());
+      setCurrentAmount(goal.currentAmount.toString());
+      setTargetDate(new Date(goal.targetDate));
+      setDescription(goal.description || "");
+      setPriority(goal.priority);
+      setMonthlyContribution(goal.monthlyContribution.toString());
+    }
+  }, [goal]);
+
+  const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user?.sub) {
-      toast.error("You must be logged in to add a transaction.");
+      toast.error("You must be logged in to update a goal.");
       return;
     }
+
+    // Validate required fields
+    if (
+      !name.trim() ||
+      !targetAmount ||
+      !currentAmount ||
+      !monthlyContribution ||
+      !targetDate
+    ) {
+      toast.error("Please fill in all required fields.");
+      return;
+    }
+
+    // Check if goal ID exists
+    const goalId = getGoalId();
+    if (!goalId) {
+      toast.error("Goal ID is missing. Cannot update goal.");
+      console.error("Goal object:", goal);
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
       const goalData = {
+        goalId: goalId, // Use the extracted ID
         userId: user.sub,
-        name,
+        name: name.trim(),
         targetAmount: parseFloat(targetAmount),
         currentAmount: parseFloat(currentAmount),
-        targetDate,
-        description,
+        targetDate: targetDate.toISOString(),
+        description: description.trim(),
         priority,
         monthlyContribution: parseFloat(monthlyContribution),
       };
 
+      console.log("Sending goal data:", goalData); // Debug log
+
       const response = await fetch("/api/goals", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(goalData),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to save goal");
+        throw new Error(errorData.error || "Failed to update goal");
       }
 
+      const result = await response.json();
+      console.log("Goal updated successfully:", result);
+
+      toast.success("Goal updated successfully!");
+      onSuccess?.(); // Refresh the goals list
       onClose();
-      toast.success("Goal added successfully!");
     } catch (error: any) {
-      console.error("Error saving goal:", error);
-      toast.error(error.message || "Failed to save goal");
+      console.error("Error updating goal:", error);
+      toast.error(`Failed to update goal: ${error.message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    const goalId = getGoalId();
+    if (!goalId || !user?.sub) {
+      toast.error("Unable to delete goal. Missing required information.");
+      return;
+    }
+
+    if (
+      !confirm(
+        "Are you sure you want to delete this goal? This action cannot be undone."
+      )
+    ) {
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const params = new URLSearchParams({
+        id: goalId,
+        userId: user.sub,
+      });
+
+      const response = await fetch(`/api/goals?${params.toString()}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to delete goal");
+      }
+
+      const result = await response.json();
+      console.log("Goal deleted successfully:", result);
+
+      toast.success("Goal deleted successfully!");
+      onSuccess?.(); // Refresh the goals list
+      onClose();
+    } catch (error: any) {
+      console.error("Error deleting goal:", error);
+      toast.error(`Failed to delete goal: ${error.message}`);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleUpdate} className="space-y-6">
       <div className="space-y-2">
-        <Label htmlFor="name">Goal Name</Label>
+        <Label htmlFor="name">Goal Name *</Label>
         <Input
           id="name"
           value={name}
@@ -106,7 +202,7 @@ export default function GoalForm({ onClose }: GoalFormProps) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-2">
-          <Label htmlFor="target">Target Amount ($)</Label>
+          <Label htmlFor="target">Target Amount ($) *</Label>
           <Input
             id="target"
             value={targetAmount}
@@ -120,7 +216,7 @@ export default function GoalForm({ onClose }: GoalFormProps) {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="current">Current Amount ($)</Label>
+          <Label htmlFor="current">Current Amount ($) *</Label>
           <Input
             id="current"
             value={currentAmount}
@@ -136,12 +232,13 @@ export default function GoalForm({ onClose }: GoalFormProps) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-2">
-          <Label htmlFor="dueDate">Target Date</Label>
+          <Label htmlFor="dueDate">Target Date *</Label>
           <Popover>
             <PopoverTrigger asChild>
               <Button
                 id="dueDate"
                 variant="outline"
+                type="button"
                 className={cn(
                   "w-full justify-start text-left font-normal",
                   !targetDate && "text-muted-foreground"
@@ -168,7 +265,7 @@ export default function GoalForm({ onClose }: GoalFormProps) {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="priority">Priority</Label>
+          <Label htmlFor="priority">Priority *</Label>
           <Select
             value={priority}
             onValueChange={(value: "High" | "Medium" | "Low") =>
@@ -198,7 +295,7 @@ export default function GoalForm({ onClose }: GoalFormProps) {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="contribution">Monthly Contribution ($)</Label>
+        <Label htmlFor="contribution">Monthly Contribution ($) *</Label>
         <Input
           id="contribution"
           value={monthlyContribution}
@@ -207,16 +304,35 @@ export default function GoalForm({ onClose }: GoalFormProps) {
           placeholder="0.00"
           step="0.01"
           min="0"
+          required
         />
       </div>
 
-      <div className="flex justify-end space-x-2">
-        <Button type="button" variant="outline" onClick={onClose}>
-          Cancel
+      <div className="flex justify-between">
+        {/* Delete button */}
+        <Button
+          type="button"
+          variant="destructive"
+          onClick={handleDelete}
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? "Deleting..." : "Delete Goal"}
         </Button>
-        <Button type="submit" disabled={isSubmitting || isLoading}>
-          {isSubmitting ? "Saving..." : "Save Goal"}
-        </Button>
+
+        {/* Action buttons */}
+        <div className="flex justify-end space-x-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onClose}
+            disabled={isSubmitting}
+          >
+            Cancel
+          </Button>
+          <Button type="submit" disabled={isSubmitting || isLoading}>
+            {isSubmitting ? "Updating..." : "Update Goal"}
+          </Button>
+        </div>
       </div>
     </form>
   );

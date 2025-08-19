@@ -49,7 +49,6 @@ export default function GoalsPage() {
               {selectedGoal ? "Edit Goal" : "Add New Goal"}
             </h2>
             <GoalForm
-            goal={selectedGoal}
             onClose={closeGoalForm}
             />
           </div>
